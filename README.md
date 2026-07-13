@@ -16,7 +16,7 @@
 > It plans, writes code, reviews, tests, commits and ships a GitHub PR.
 > Fully autonomous. Safety by design.
 
-[Architecture](#architecture) • [Why MCP + A2A](#engineering-decisions) • [Agents](#agents) • [Safety](#safety-system) • [CLI](#cli) • [Setup](#setup)
+[Architecture](#architecture) • [MCP + A2A](#engineering-decisions) • [Agents](#agents) • [Safety](#safety-system) • [CLI](#cli) • [Setup](#setup)
 
 </div>
 
