@@ -185,41 +185,6 @@ User runs: nexus run "add error handling to main.py"
 
 ---
 
-## 🔬 Low-Level Design (LLD)
-
-### Agent Architecture
-
-```
-NexusAgent (Abstract Base Class)
-├── Properties
-│   ├── agent_id: str
-│   ├── name: str
-│   ├── capabilities: list[str]
-│   └── current_task: str | None
-│
-├── A2A Methods
-│   ├── handle_message(A2AMessage) → A2AMessage
-│   ├── send_to(agent_id, task, context) → dict
-│   └── delegate_to(capability, task) → dict
-│
-├── LLM Methods
-│   └── think(prompt, max_tokens, temperature) → str
-│
-└── Task Methods
-    ├── start_task(task_id)
-    ├── complete_task()
-    └── new_task_id() → str
-         │
-         ├── PlannerAgent     → planning, task_decomposition
-         ├── CoderAgent       → code_writing, bug_fixing
-         ├── ReviewerAgent    → code_review, peer_review
-         ├── SecurityAgent    → security_scan, secret_detection
-         ├── TesterAgent      → test_execution, test_writing
-         └── ValidatorAgent   → validation, confidence_scoring
-```
-
----
-
 ### A2A Message Schema
 
 ```python
