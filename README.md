@@ -278,50 +278,6 @@ Code: 20 + Review: 22.5 + Security: 30 + Tests: 25
 
 ---
 
-### Project Structure
-
-```
-nexus-ai/
-├── cli.py                      # 7-command CLI interface
-├── main.py                     # Entry point
-├── setup.py                    # Installable package
-├── mcp/
-│   ├── server.py               # MCP server — 18 tools
-│   └── tools/
-│       ├── file_tools.py       # read/write/search files
-│       ├── git_tools.py        # branch/commit/push/PR
-│       ├── test_tools.py       # run/write/list tests
-│       └── search_tools.py     # semantic/pattern search
-├── a2a/
-│   ├── protocol.py             # A2A message routing
-│   └── registry.py             # Agent capability registry
-├── agents/
-│   ├── base.py                 # NexusAgent abstract class
-│   ├── planner.py              # Task decomposition
-│   ├── coder.py                # Code writing
-│   ├── reviewer.py             # Code review peer
-│   ├── security.py             # Security scanning
-│   ├── tester.py               # Test execution + writing
-│   ├── validator.py            # Confidence scoring
-│   └── orchestrator.py        # End to end coordination
-├── safety/
-│   ├── classifier.py           # Risk classification
-│   ├── guardrails.py           # Safety enforcement
-│   └── rollback.py             # Backup + restore
-├── core/
-│   ├── config.py               # Frozen dataclass settings
-│   ├── logging.py              # Structured logging
-│   ├── exceptions.py           # Custom exception hierarchy
-│   └── llm.py                  # Groq + fallback chain
-├── graph/
-│   ├── neo4j_client.py         # Graph queries
-│   └── graph_builder.py        # Graph construction
-└── storage/
-    └── audit.py                # SQLite audit log
-```
-
----
-
 ## 🎯 Engineering Decisions
 
 ---
@@ -345,15 +301,6 @@ Agent calls create_pr(...) → real PR created on GitHub
 
 Zero human copy-paste. Zero manual file management.
 ```
-
-**Alternatives considered:**
-
-| Option | Why Rejected |
-|---|---|
-| LangChain tools | Too opinionated, harder to expose via standard protocol |
-| Custom REST API | Not interoperable with Claude Desktop or Cursor IDE |
-| Direct function calls | Not discoverable, not standard, no ecosystem |
-| MCP ✅ | Standard protocol, works with any MCP client, growing ecosystem |
 
 ---
 
@@ -391,75 +338,8 @@ Benefits:
 - One agent failure doesn't kill pipeline
 ```
 
-**Alternatives considered:**
-
-| Option | Why Rejected |
-|---|---|
-| LangGraph only | Good for workflows, not peer communication |
-| CrewAI | Higher abstraction, less control over protocol |
-| AutoGen | Microsoft specific, different protocol |
-| Custom messaging | Not interoperable, reinventing the wheel |
-| A2A ✅ | Google standard, growing ecosystem, proper peer model |
-
 ---
 
-### Why Groq Over OpenAI?
-
-**Problem:** OpenAI API costs money and has lower rate limits on free tier.
-
-**Decision:** Use Groq with LLaMA3 as primary, with automatic fallback.
-
-```python
-# Fallback chain in core/llm.py
-Primary:  llama-3.3-70b-versatile  (best quality)
-Fallback: llama-3.1-8b-instant     (faster, higher limits)
-
-On rate limit:
-→ Automatically switches to fallback
-→ Logs warning with model name
-→ Returns result transparently
-→ No user-visible failure
-```
-
-| Factor | OpenAI GPT-4 | Groq LLaMA3 |
-|---|---|---|
-| Cost | ~$30/1M tokens | Free tier |
-| Speed | ~2-5 sec | ~0.5-1 sec |
-| Rate limits | Paid tiers | 14,400 req/day free |
-| Quality | Excellent | Very good |
-| Decision | Too expensive for dev | ✅ Perfect for project |
-
----
-
-### Why Neo4j Over PostgreSQL?
-
-**Problem:** Understanding code dependencies requires traversing relationships across many hops — which files import which, which services call which APIs.
-
-**Decision:** Neo4j graph database for dependency mapping.
-
-```
-PostgreSQL approach:
-SELECT * FROM dependencies
-JOIN files ON dependencies.target_id = files.id
-WHERE dependencies.source_id = ?
--- needs recursive CTEs for multi-hop
--- expensive at scale
-
-Neo4j approach:
-MATCH (f:File {path: $path})
-      <-[:IMPORTS|CALLS*1..5]-(dependent:File)
-RETURN dependent.path
--- single query regardless of depth
--- relationship traversal is native
-```
-
-**When Neo4j wins:**
-- Finding all downstream dependents of a changed file
-- Detecting circular dependencies
-- Mapping service-to-service call chains
-- Historical PR impact analysis
-
----
 
 ### Why SQLite For Audit Log?
 
@@ -484,32 +364,6 @@ Production upgrade path: swap SQLite for PostgreSQL with zero code change — ju
 
 ---
 
-### Why Frozen Dataclass For Config?
-
-```python
-@dataclass(frozen=True, slots=True)
-class Settings:
-    groq_api_key: str
-    ...
-```
-
-**Decision:** Immutable frozen dataclass over Pydantic BaseSettings or plain dict.
-
-```
-Plain dict:
-settings["key"] = "accidentally_changed"  # silent bug
-
-Pydantic BaseSettings:
-Good but heavy dependency for simple config
-
-Frozen dataclass:
-settings.groq_api_key = "new"  # raises FrozenInstanceError immediately
-+ slots=True → memory efficient
-+ @lru_cache → singleton, loaded once
-+ Python stdlib → zero extra dependency
-```
-
----
 
 ## 🛡️ Safety System
 
