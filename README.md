@@ -252,31 +252,6 @@ auto     → LOW + MEDIUM auto, HIGH blocked
 
 ---
 
-### Confidence Scoring Formula
-
-```
-ValidatorAgent calculates:
-
-score = 0
-
-Code written successfully  → +20 points
-Reviewer approved          → +25 × (quality/100)
-Security approved          → +30 points
-  └── only false positives → +30 points
-  └── low/medium issues    → +15 points
-  └── critical found       → +0 points
-Tests passing              → +25 points
-  └── partial pass rate    → +25 × (passed/total)
-
-Max score = 100
-Minimum to approve = 70
-
-Example:
-Code: 20 + Review: 22.5 + Security: 30 + Tests: 25
-= 97.5% confidence → APPROVED ✅
-```
-
----
 
 ## 🎯 Engineering Decisions
 
@@ -309,7 +284,7 @@ Zero human copy-paste. Zero manual file management.
 **Problem:** Traditional multi-agent systems use a central orchestrator that controls all agents. This creates a single point of failure and limits agent autonomy.
 
 ```
-Traditional (what CodeGuardian uses):
+Traditional:
 Orchestrator → Agent A (waits)
 Orchestrator → Agent B (waits)
 Orchestrator → Agent C (waits)
@@ -339,31 +314,6 @@ Benefits:
 ```
 
 ---
-
-
-### Why SQLite For Audit Log?
-
-**Decision:** SQLite over Redis/PostgreSQL for audit storage.
-
-```
-Requirements:
-→ Store operation history
-→ Track file backups
-→ Enable rollback queries
-→ Zero infrastructure cost
-
-SQLite wins because:
-→ Zero setup — built into Python
-→ File-based — works offline
-→ Fast for read-heavy audit queries
-→ No server to maintain
-→ Perfect for single-machine dev tool
-```
-
-Production upgrade path: swap SQLite for PostgreSQL with zero code change — just update connection string.
-
----
-
 
 ## 🛡️ Safety System
 
@@ -459,20 +409,157 @@ Return result transparently
 No user-visible failure
 ```
 
-### Agent Failure Handling
+---
+
+## 📊 Metrics and Observability
+
+### Confidence Score Breakdown
 
 ```
-If CoderAgent fails:
-→ Returns {"success": False, "error": "..."}
-→ Orchestrator catches → returns error result
-→ Files NOT committed (nothing to rollback)
-→ Branch still exists for debugging
+Every task produces a confidence score 0-100%:
 
-If SecurityAgent finds critical issue:
-→ Returns {"approved": False, "critical_count": 1}
-→ Orchestrator blocks PR creation
-→ Logs findings to terminal
-→ Task marked failed with details
+┌─────────────────────────────────────────────┐
+│ Metric          Weight   How Calculated     │
+├─────────────────────────────────────────────┤
+│ Code Written      20%   success bool        │
+│ Review Quality    25%   25 × quality/100    │
+│ Security Clear    30%   approved bool       │
+│ Tests Passing     25%   passed/total ratio  │
+├─────────────────────────────────────────────┤
+│ Total            100%   sum of above        │
+│ Threshold         70%   minimum to approve  │
+└─────────────────────────────────────────────┘
 
-If PR creation fails 422:
-→ Checks if P
+Real example from run:
+Code: 20 + Review(90/100): 22.5 + Security: 30 + Tests: 25
+= 97.5% → APPROVED ✅
+```
+
+---
+
+## 🤖 Agents
+
+| Agent | Capabilities | Temperature | Key Tool |
+|---|---|---|---|
+| **PlannerAgent** | planning, task_decomposition | 0.2 | LLM reasoning |
+| **CoderAgent** | code_writing, bug_fixing | 0.2 | write_file + LLM |
+| **ReviewerAgent** | code_review, peer_review | 0.1 | read_file + LLM |
+| **SecurityAgent** | security_scan, secret_detection | 0.1 | pattern scan + LLM |
+| **TesterAgent** | test_execution, test_writing | 0.2 | run_tests + LLM |
+| **ValidatorAgent** | validation, confidence_scoring | 0.3 | scoring formula |
+
+---
+
+## ⚙️ Setup
+
+### Prerequisites
+
+```
+Python 3.11+
+Git repository to operate on
+Groq API key (free at console.groq.com)
+GitHub Personal Access Token
+Neo4j Aura instance (free tier)
+```
+
+### Installation
+
+```bash
+git clone https://github.com/kalyan4270/nexus-ai.git
+cd nexus-ai
+
+python -m venv venv
+venv\Scripts\activate       # Windows
+source venv/bin/activate    # Mac/Linux
+
+pip install -r requirements.txt
+pip install -e .
+```
+
+### Environment Variables
+
+```env
+# LLM
+GROQ_API_KEY=your_groq_api_key
+GROQ_MODEL=llama-3.3-70b-versatile
+GROQ_FALLBACK_MODELS=llama-3.1-8b-instant
+
+# GitHub
+GITHUB_TOKEN=your_github_token
+
+# Neo4j
+NEO4J_URI=neo4j+ssc://xxxxxxxx.databases.neo4j.io
+NEO4J_USERNAME=neo4j
+NEO4J_PASSWORD=your_password
+
+# Nexus Config
+TARGET_REPO_PATH=your-repo-path
+SAFETY_LEVEL=balanced
+AUTO_CREATE_PR=true
+AUTO_RUN_TESTS=true
+```
+
+### Quick Start
+
+```bash
+# Check agents are ready
+nexus status
+
+# Ask about your codebase
+nexus ask "what does main.py do?"
+
+# Preview a task
+nexus plan "add error handling to main.py"
+
+# Run your first autonomous task
+nexus run "add docstrings to core/config.py"
+```
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology | Why |
+|---|---|---|
+| **Agent Protocol** | A2A (Google 2025) | Peer communication, no central boss |
+| **Tool Protocol** | MCP (Anthropic 2024) | Standard tool interface, IDE compatible |
+| **Orchestration** | LangGraph | State machine for agent workflow |
+| **LLM Provider** | Groq LLaMA3 70B | Free tier, fast inference |
+| **LLM Fallback** | Groq LLaMA3 8B | Auto-switch on rate limits |
+| **Knowledge Graph** | Neo4j | Dependency relationship traversal |
+| **Git Automation** | GitPython | Programmatic git operations |
+| **CLI** | Click + Rich | Beautiful terminal interface |
+| **Audit Storage** | SQLite | Zero-setup, built-in Python |
+| **Config** | Frozen dataclass | Immutable, thread-safe, zero deps |
+
+---
+
+## 🔮 Future Enhancements
+
+- [ ] Browser-based UI for visual agent workflow
+- [ ] WebSocket for real-time agent progress streaming
+- [ ] Support for JavaScript and Java codebases
+- [ ] Multi-repo operations (change across services)
+- [ ] Slack/Teams integration for PR notifications
+- [ ] Docker containerization
+- [ ] Agent memory across sessions
+- [ ] Cost tracking per task
+
+---
+
+## 👤 Author
+
+**Chodabattula Yaswanth**
+- GitHub: [@kalyan4270](https://github.com/kalyan4270)
+- LinkedIn: [Yaswanth](https://linkedin.com/in/chodabattula-yaswanth-venkata-kalyan-702b9523a)
+- Portfolio: [yaswanth-portfolio](https://yaswanth-portfolio-v4uc.vercel.app/)
+
+---
+
+<div align="center">
+
+Built with MCP • A2A • LangGraph • Groq • Neo4j • GitPython
+
+*"Give it one instruction. It ships the code."*
+
+</div>
