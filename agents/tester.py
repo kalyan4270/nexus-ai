@@ -9,13 +9,13 @@ from typing import Any
 
 from agents.base import NexusAgent
 from core.logging import get_logger
-from mcp.tools.file_tools import read_file, write_file
-from mcp.tools.test_tools import (
+from nexus_mcp.tools.file_tools import read_file, write_file
+from nexus_mcp.tools.test_tools import (
     run_tests,
     list_tests,
     check_coverage,
 )
-from mcp.tools.search_tools import find_function
+from nexus_mcp.tools.search_tools import find_function
 
 logger = get_logger(__name__)
 

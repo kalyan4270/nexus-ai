@@ -17,16 +17,17 @@ from mcp.types import (
     TextContent,
     Tool,
 )
+from mcp.server import Server, NotificationOptions
 
 from core.logging import get_logger
-from mcp.tools.file_tools import (
+from nexus_mcp.tools.file_tools import (
     read_file,
     write_file,
     list_files,
     search_codebase,
     explain_code,
 )
-from mcp.tools.git_tools import (
+from nexus_mcp.tools.git_tools import (
     get_status,
     create_branch,
     get_diff,
@@ -35,13 +36,13 @@ from mcp.tools.git_tools import (
     get_commit_history,
     commit_changes,
 )
-from mcp.tools.test_tools import (
+from nexus_mcp.tools.test_tools import (
     run_tests,
     run_single_test,
     check_coverage,
     list_tests,
 )
-from mcp.tools.search_tools import (
+from nexus_mcp.tools.search_tools import (
     search_pattern,
     semantic_search,
     find_function,
@@ -452,6 +453,7 @@ async def call_tool(
 async def run_mcp_server() -> None:
     """Start the MCP server via stdio."""
     logger.info("🚀 Starting Nexus AI MCP Server...")
+
     async with stdio_server() as (read_stream, write_stream):
         await server.run(
             read_stream,
@@ -460,7 +462,7 @@ async def run_mcp_server() -> None:
                 server_name="nexus-ai",
                 server_version="1.0.0",
                 capabilities=server.get_capabilities(
-                    notification_options=None,
+                    notification_options=NotificationOptions(),
                     experimental_capabilities={}
                 )
             )

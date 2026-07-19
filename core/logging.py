@@ -11,7 +11,7 @@ def setup_logging(level: int = logging.INFO) -> None:
     if root.handlers:
         return
 
-    handler = logging.StreamHandler(sys.stdout)
+    handler = logging.StreamHandler(sys.stderr)
     handler.setFormatter(
         logging.Formatter(
             fmt="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",

@@ -9,8 +9,8 @@ from typing import Any
 
 from agents.base import NexusAgent
 from core.logging import get_logger
-from mcp.tools.file_tools import read_file
-from mcp.tools.search_tools import semantic_search
+from nexus_mcp.tools.file_tools import read_file
+from nexus_mcp.tools.search_tools import semantic_search
 
 logger = get_logger(__name__)
 

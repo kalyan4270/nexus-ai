@@ -430,7 +430,7 @@ def ask(question: str) -> None:
     """
     print_banner()
 
-    from mcp.tools.search_tools import semantic_search
+    from nexus_mcp.tools.search_tools import semantic_search
     from core.llm import complete
 
     console.print(
@@ -477,25 +477,11 @@ where relevant.
         border_style="cyan"
     ))
 
-
 @cli.command()
-def mcp() -> None:
-    """
-    Start the MCP server for Claude Desktop
-    or Cursor IDE integration.
-
-    Example:
-        nexus mcp
-    """
+def mcp():
+    """Start the MCP server."""
     import asyncio
-    from mcp.server import run_mcp_server
-
-    console.print(Panel(
-        "[cyan]Starting Nexus AI MCP Server...[/cyan]\n"
-        "[dim]Connect via Claude Desktop or Cursor IDE[/dim]",
-        title="[cyan]🔌 MCP Server[/cyan]",
-        border_style="cyan"
-    ))
+    from nexus_mcp.nexus_server import run_mcp_server
 
     asyncio.run(run_mcp_server())
 

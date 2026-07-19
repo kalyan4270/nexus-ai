@@ -9,12 +9,12 @@ from typing import Any
 
 from agents.base import NexusAgent
 from core.logging import get_logger
-from mcp.tools.file_tools import (
+from nexus_mcp.tools.file_tools import (
     read_file,
     write_file,
     list_files,
 )
-from mcp.tools.search_tools import (
+from nexus_mcp.tools.search_tools import (
     semantic_search,
     find_function,
     analyze_imports,

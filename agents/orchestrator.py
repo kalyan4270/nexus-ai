@@ -16,7 +16,7 @@ from agents.security  import SecurityAgent
 from agents.tester    import TesterAgent
 from agents.validator import ValidatorAgent
 from core.logging     import get_logger
-from mcp.tools.git_tools import (
+from nexus_mcp.tools.git_tools import (
     create_branch,
     create_pr,
     get_status,
@@ -146,7 +146,7 @@ class NexusOrchestrator:
 
             
             if files_changed:
-                from mcp.tools.git_tools import commit_changes
+                from nexus_mcp.tools.git_tools import commit_changes
                 commit_result = commit_changes(
                     message=f"[Nexus AI] {instruction[:60]}\n\n"
                             f"Files changed: {', '.join(files_changed)}",
