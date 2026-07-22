@@ -9,6 +9,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Project root directory
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 @dataclass(frozen=True, slots=True)
 class Settings:
@@ -31,7 +33,7 @@ class Settings:
     auto_create_pr:        bool = False
     auto_run_tests:        bool = True
     max_diff_chars:        int = 6_000
-    audit_db_path:         str = "nexus_audit.db"
+    audit_db_path:         Path = PROJECT_ROOT / "nexus_audit.db"
 
     @classmethod
     def from_env(cls) -> Settings:

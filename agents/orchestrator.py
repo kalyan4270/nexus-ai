@@ -72,14 +72,14 @@ class NexusOrchestrator:
         console.print()
         console.print(Panel(
             f"[bold cyan]{instruction}[/bold cyan]",
-            title="[cyan]🤖 Nexus AI — Starting Task[/cyan]",
+            title="[cyan]Nexus AI — Starting Task[/cyan]",
             border_style="cyan"
         ))
 
         try:
             # ── Step 1: Plan ─────────────────────────
             console.print(
-                "\n[cyan]📋 Step 1/6 — Planning...[/cyan]"
+                "\n[cyan] Step 1/6 — Planning...[/cyan]"
             )
             plan_result = self.planner.execute(
                 task=    instruction,
@@ -102,7 +102,7 @@ class NexusOrchestrator:
 
             # ── Step 2: Create Branch ─────────────────
             console.print(
-                "\n[cyan]🌿 Creating branch...[/cyan]"
+                "\n[cyan] Creating branch...[/cyan]"
             )
             branch_name = (
                 f"nexus/{task_id}/"
@@ -118,7 +118,7 @@ class NexusOrchestrator:
 
             # ── Step 3: Code ──────────────────────────
             console.print(
-                "\n[cyan]💻 Step 2/6 — Writing code...[/cyan]"
+                "\n[cyan] Step 2/6 — Writing code...[/cyan]"
             )
             coder_result = self.coder.execute(
                 task=    instruction,
@@ -140,7 +140,7 @@ class NexusOrchestrator:
                 "files_changed", []
             )
             console.print(
-                f"[green]✅ {len(files_changed)} "
+                f"[green] {len(files_changed)} "
                 f"file(s) changed[/green]"
             )
 
@@ -154,7 +154,7 @@ class NexusOrchestrator:
                 )
                 if commit_result.get("success"):
                     console.print(
-                        f"[green]📝 Committed: "
+                        f"[green] Committed: "
                         f"{commit_result.get('commit_hash')}[/green]"
                     )
                 else:
@@ -165,7 +165,7 @@ class NexusOrchestrator:
 
             # ── Step 4: Review + Security (parallel) ─
             console.print(
-                "\n[cyan]🔍 Step 3/6 — "
+                "\n[cyan] Step 3/6 — "
                 "Reviewing + Security scan "
                 "(parallel)...[/cyan]"
             )
@@ -202,14 +202,14 @@ class NexusOrchestrator:
             # Show review results
             if reviewer_result.get("approved"):
                 console.print(
-                    f"[green]✅ Code review passed "
+                    f"[green] Code review passed "
                     f"(score: "
                     f"{reviewer_result.get('quality_score', 0)}"
                     f"/100)[/green]"
                 )
             else:
                 console.print(
-                    f"[yellow]⚠ Review issues: "
+                    f"[yellow] Review issues: "
                     f"{len(reviewer_result.get('issues', []))}"
                     f"[/yellow]"
                 )
@@ -217,11 +217,11 @@ class NexusOrchestrator:
             # Show security results
             if security_result.get("approved"):
                 console.print(
-                    "[green]✅ Security scan passed[/green]"
+                    "[green] Security scan passed[/green]"
                 )
             else:
                 console.print(
-                    f"[red]🚨 Security issues found: "
+                    f"[red] Security issues found: "
                     f"{security_result.get('critical_count', 0)}"
                     f" critical[/red]"
                 )
@@ -242,7 +242,7 @@ class NexusOrchestrator:
 
             # ── Step 5: Tests ─────────────────────────
             console.print(
-                "\n[cyan]🧪 Step 4/6 — "
+                "\n[cyan] Step 4/6 — "
                 "Running tests...[/cyan]"
             )
             tester_result = self.tester.execute(
@@ -256,20 +256,20 @@ class NexusOrchestrator:
 
             if tester_result.get("all_passed"):
                 console.print(
-                    f"[green]✅ Tests passing: "
+                    f"[green] Tests passing: "
                     f"{tester_result.get('passed', 0)} "
                     f"passed[/green]"
                 )
             else:
                 console.print(
-                    f"[red]❌ Tests failing: "
+                    f"[red] Tests failing: "
                     f"{tester_result.get('failed', 0)} "
                     f"failed[/red]"
                 )
 
             # ── Step 6: Validate ──────────────────────
             console.print(
-                "\n[cyan]✔️ Step 5/6 — "
+                "\n[cyan] Step 5/6 — "
                 "Final validation...[/cyan]"
             )
             validation = self.validator.execute(
@@ -305,7 +305,7 @@ class NexusOrchestrator:
 
             # ── Step 7: Create PR ─────────────────────
             console.print(
-                "\n[cyan]🔗 Step 6/6 — "
+                "\n[cyan] Step 6/6 — "
                 "Creating PR...[/cyan]"
             )
 
@@ -323,14 +323,14 @@ class NexusOrchestrator:
 
             if pr_result.get("success"):
                 console.print(
-                    f"\n[bold green]🎉 Done! "
+                    f"\n[bold green] Done! "
                     f"PR #{pr_result.get('pr_number')} "
                     f"created:[/bold green] "
                     f"{pr_result.get('pr_url')}"
                 )
             else:
                 console.print(
-                    f"[yellow]⚠ PR creation failed: "
+                    f"[yellow] PR creation failed: "
                     f"{pr_result.get('error')}[/yellow]"
                 )
 
@@ -385,7 +385,7 @@ class NexusOrchestrator:
             f"- `{t}`" for t in tests_written
         )
 
-        return f"""## 🤖 Nexus AI Autonomous Change
+        return f"""##  Nexus AI Autonomous Change
 
 ### Task
 {instruction}
@@ -398,15 +398,15 @@ class NexusOrchestrator:
 
 ### Tests
 {tests_list or '- No new tests written'}
-- ✅ {tester_result.get('passed', 0)} tests passing
+-  {tester_result.get('passed', 0)} tests passing
 
 ### Quality Metrics
 | Metric | Result |
 |--------|--------|
 | Confidence Score | {validation.get('confidence', 0)}% |
 | Code Quality | {breakdown.get('quality_score', 0)}/100 |
-| Security | {'✅ Passed' if breakdown.get('security_passed') else '❌ Failed'} |
-| Tests | {'✅ All passing' if breakdown.get('tests_passed') else '❌ Some failing'} |
+| Security | {' Passed' if breakdown.get('security_passed') else '❌ Failed'} |
+| Tests | {' All passing' if breakdown.get('tests_passed') else '❌ Some failing'} |
 
 ### Agents Involved
 - 📋 PlannerAgent — Task decomposition

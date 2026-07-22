@@ -24,9 +24,14 @@ class RollbackManager:
 
     def __init__(self) -> None:
         settings = get_settings()
-        self.db_path  = settings.audit_db_path
-        self.backup_dir = Path(".nexus_backups")
-        self.backup_dir.mkdir(exist_ok=True)
+        self.db_path = settings.audit_db_path
+
+        project_root = Path(__file__).resolve().parent.parent
+
+        # Always create backups inside the project
+        self.backup_dir = project_root / ".nexus_backups"
+        self.backup_dir.mkdir(parents=True, exist_ok=True)
+
         self._init_db()
 
     def _init_db(self) -> None:

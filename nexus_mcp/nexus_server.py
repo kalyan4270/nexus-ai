@@ -49,10 +49,18 @@ from nexus_mcp.tools.search_tools import (
     analyze_imports,
 )
 
+from nexus_mcp.pipeline_tools import (
+    run_nexus_pipeline,
+    get_nexus_plan,
+    get_nexus_status,
+)
+
 import json
 
 logger = get_logger(__name__)
 server = Server("nexus-ai")
+
+import inspect
 
 
 # ─── Tool Definitions ───────────────────────────────────
@@ -65,6 +73,61 @@ async def list_tools(
     return ListToolsResult(tools=[
 
         # File Tools
+
+        Tool(
+            name="nexus_run",
+            description=(
+                "Run the full Nexus AI autonomous pipeline. "
+                "Takes one plain English instruction and "
+                "independently plans, writes code, reviews, "
+                "tests, commits and creates a GitHub PR. "
+                "Uses 6 specialized AI agents with A2A protocol."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "instruction": {
+                        "type":        "string",
+                        "description": "Plain English instruction e.g. "
+                                    "'add error handling to main.py'"
+                    },
+                    "safety_level": {
+                        "type":        "string",
+                        "description": "strict / balanced / auto",
+                        "default":     "balanced"
+                    }
+                },
+                "required": ["instruction"]
+            }
+        ),
+        Tool(
+            name="nexus_plan",
+            description=(
+                "Show the execution plan for an instruction "
+                "without actually executing it. "
+                "Shows what steps Nexus AI will take."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "instruction": {
+                        "type":        "string",
+                        "description": "Plain English instruction"
+                    }
+                },
+                "required": ["instruction"]
+            }
+        ),
+        Tool(
+            name="nexus_status",
+            description="Show status of all 6 Nexus AI agents",
+            inputSchema={
+                "type":       "object",
+                "properties": {}
+            }
+        ),  
+
+
         Tool(
             name="read_file",
             description="Read contents of any file in the repository",
@@ -374,79 +437,107 @@ async def list_tools(
 
 
 # ─── Tool Execution ─────────────────────────────────────
-
 @server.call_tool()
 async def call_tool(
-    request: CallToolRequest
-) -> CallToolResult:
-    """Route tool calls to correct handler."""
+    name: str,
+    args: dict,
+):
+    """Route tool calls to the correct handler."""
 
-    name = request.params.name
-    args = request.params.arguments or {}
+    args = args or {}
 
-    logger.info("🔧 Tool called: %s", name)
+    logger.info("Tool called: %s", name)
 
-    # Route to correct tool function
     tool_map = {
-        # File tools
+        # ---------------- File Tools ----------------
         "read_file":        lambda: read_file(**args),
         "write_file":       lambda: write_file(**args),
         "list_files":       lambda: list_files(**args),
         "search_codebase":  lambda: search_codebase(**args),
         "explain_code":     lambda: explain_code(**args),
 
-        # Git tools
-        "get_status":       lambda: get_status(),
-        "create_branch":    lambda: create_branch(**args),
-        "get_diff":         lambda: get_diff(**args),
-        "create_pr":        lambda: create_pr(**args),
+        # ---------------- Git Tools ----------------
+        "get_status":         lambda: get_status(),
+        "create_branch":      lambda: create_branch(**args),
+        "get_diff":           lambda: get_diff(**args),
+        "stage_files":        lambda: stage_files(**args),
+        "create_pr":          lambda: create_pr(**args),
         "get_commit_history": lambda: get_commit_history(**args),
         "commit_changes":     lambda: commit_changes(**args),
 
-        # Test tools
-        "run_tests":        lambda: run_tests(**args),
-        "run_single_test":  lambda: run_single_test(**args),
-        "check_coverage":   lambda: check_coverage(**args),
-        "list_tests":       lambda: list_tests(**args),
+        # ---------------- Test Tools ----------------
+        "run_tests":       lambda: run_tests(**args),
+        "run_single_test": lambda: run_single_test(**args),
+        "check_coverage":  lambda: check_coverage(**args),
+        "list_tests":      lambda: list_tests(**args),
 
-        # Search tools
-        "search_pattern":   lambda: search_pattern(**args),
-        "semantic_search":  lambda: semantic_search(**args),
-        "find_function":    lambda: find_function(**args),
-        "analyze_imports":  lambda: analyze_imports(**args),
+        # ---------------- Search Tools ----------------
+        "search_pattern":  lambda: search_pattern(**args),
+        "semantic_search": lambda: semantic_search(**args),
+        "find_function":   lambda: find_function(**args),
+        "analyze_imports": lambda: analyze_imports(**args),
+
+        # ---------------- Nexus Pipeline ----------------
+        "nexus_run": lambda: run_nexus_pipeline(
+            instruction=args.get("instruction", ""),
+            safety_level=args.get("safety_level", "balanced"),
+        ),
+
+        "nexus_plan": lambda: get_nexus_plan(
+            instruction=args.get("instruction", "")
+        ),
+
+        "nexus_status": lambda: get_nexus_status(),
     }
 
     if name not in tool_map:
         return CallToolResult(
-            content=[TextContent(
-                type="text",
-                text=json.dumps({
-                    "error":   f"Unknown tool: {name}",
-                    "success": False
-                })
-            )]
+            content=[
+                TextContent(
+                    type="text",
+                    text=json.dumps(
+                        {
+                            "success": False,
+                            "error": f"Unknown tool: {name}",
+                        },
+                        indent=2,
+                    ),
+                )
+            ]
         )
 
     try:
         result = tool_map[name]()
+
+        if inspect.isawaitable(result):
+            result = await result
+
         return CallToolResult(
-            content=[TextContent(
-                type="text",
-                text=json.dumps(result, indent=2)
-            )]
-        )
-    except Exception as exc:
-        logger.error("Tool %s failed: %s", name, exc)
-        return CallToolResult(
-            content=[TextContent(
-                type="text",
-                text=json.dumps({
-                    "error":   str(exc),
-                    "success": False
-                })
-            )]
+            content=[
+                TextContent(
+                    type="text",
+                    text=json.dumps(result, indent=2),
+                )
+            ]
         )
 
+    except Exception as e:
+        logger.exception("Tool %s failed", name)
+
+        return CallToolResult(
+            content=[
+                TextContent(
+                    type="text",
+                    text=json.dumps(
+                        {
+                            "success": False,
+                            "error": str(e),
+                        },
+                        indent=2,
+                    ),
+                )
+            ]
+        )
 
 # ─── Run Server ─────────────────────────────────────────
 
