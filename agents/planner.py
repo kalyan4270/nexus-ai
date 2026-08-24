@@ -197,22 +197,30 @@ Rules:
                 ]
             }
 
-    def display_plan(
-        self,
-        plan: dict[str, Any]
-    ) -> str:
-        """
-        Format plan for terminal display.
-        """
+    def display_plan(self, plan: dict[str, Any]) -> str:
+        from core.output import is_mcp_mode, print_panel
+
+        steps = plan.get("steps", [])
+
+        if is_mcp_mode():
+            # In MCP mode just log the plan
+            logger.info("Plan: %s", plan.get("summary", ""))
+            for step in steps:
+                logger.info(
+                    "Step %s: %s [%s]",
+                    step.get("step_number"),
+                    step.get("description"),
+                    step.get("risk")
+                )
+            return plan.get("summary", "")
+
+        # CLI mode — full Rich output
         from rich.console import Console
-        from rich.panel import Panel
-        from rich.table import Table
-        from rich import box
+        from rich.panel   import Panel
+        from rich.table   import Table
+        from rich         import box
 
         console = Console()
-        steps   = plan.get("steps", [])
-
-        # Header
         risk_color = {
             "LOW":    "green",
             "MEDIUM": "yellow",
@@ -222,40 +230,23 @@ Rules:
         console.print()
         console.print(Panel(
             f"[bold]{plan.get('summary', '')}[/bold]\n\n"
-            f"[{risk_color}]Risk: "
-            f"{plan.get('risk_level', 'LOW')}[/{risk_color}]  "
-            f"[cyan]Est. time: "
-            f"{plan.get('estimated_time', 'Unknown')}[/cyan]",
+            f"[{risk_color}]Risk: {plan.get('risk_level', 'LOW')}[/{risk_color}]  "
+            f"[cyan]Est. time: {plan.get('estimated_time', 'Unknown')}[/cyan]",
             title="[cyan]📋 Execution Plan[/cyan]",
             border_style="cyan"
         ))
 
-        # Steps table
-        table = Table(
-            box=box.ROUNDED,
-            show_header=True,
-            header_style="bold cyan"
-        )
-        table.add_column("#",           width=4)
-        table.add_column("Step",        width=40)
-        table.add_column("Agent",       width=15)
-        table.add_column("Risk",        width=8)
-        table.add_column("Confirm",     width=8)
+        table = Table(box=box.ROUNDED, show_header=True, header_style="bold cyan")
+        table.add_column("#",       width=4)
+        table.add_column("Step",    width=40)
+        table.add_column("Agent",   width=15)
+        table.add_column("Risk",    width=8)
+        table.add_column("Confirm", width=8)
 
         for step in steps:
             risk  = step.get("risk", "LOW")
-            color = {
-                "LOW":    "green",
-                "MEDIUM": "yellow",
-                "HIGH":   "red"
-            }.get(risk, "white")
-
-            confirm = (
-                "✓" if step.get(
-                    "requires_confirmation"
-                ) else "auto"
-            )
-
+            color = {"LOW": "green", "MEDIUM": "yellow", "HIGH": "red"}.get(risk, "white")
+            confirm = "✓" if step.get("requires_confirmation") else "auto"
             table.add_row(
                 str(step.get("step_number", "")),
                 step.get("description", ""),

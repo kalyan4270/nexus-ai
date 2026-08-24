@@ -267,29 +267,32 @@ Mention the most important outcomes.
             temperature= 0.3
         )
 
-    def display_results(
-        self,
-        validation: dict[str, Any]
-    ) -> None:
-        """
-        Display final results in terminal
-        with rich formatting.
-        """
+    def display_results(self, validation: dict[str, Any]) -> None:
+        from core.output import is_mcp_mode
+
+        if is_mcp_mode():
+            # Just log in MCP mode
+            logger.info(
+                "Validation: approved=%s confidence=%s%%",
+                validation.get("approved"),
+                validation.get("confidence")
+            )
+            return
+
+        # CLI mode — full Rich output
         from rich.console import Console
-        from rich.panel import Panel
-        from rich.table import Table
-        from rich import box
+        from rich.panel   import Panel
+        from rich.table   import Table
+        from rich         import box
 
         console   = Console()
         breakdown = validation.get("breakdown", {})
         approved  = validation.get("approved", False)
         confidence = validation.get("confidence", 0)
 
-        # Color based on approval
         color = "green" if approved else "red"
         icon  = "✅" if approved else "❌"
 
-        # Summary panel
         console.print()
         console.print(Panel(
             f"[bold]{validation.get('summary', '')}[/bold]",
@@ -301,12 +304,7 @@ Mention the most important outcomes.
             border_style=color
         ))
 
-        # Results table
-        table = Table(
-            box=box.ROUNDED,
-            show_header=True,
-            header_style="bold cyan"
-        )
+        table = Table(box=box.ROUNDED, show_header=True, header_style="bold cyan")
         table.add_column("Check",   width=25)
         table.add_column("Result",  width=15)
         table.add_column("Details", width=35)
@@ -315,26 +313,22 @@ Mention the most important outcomes.
             (
                 "Code Written",
                 breakdown.get("code_written", False),
-                f"{len(breakdown.get('files_changed', []))} "
-                f"file(s) changed"
+                f"{len(breakdown.get('files_changed', []))} file(s) changed"
             ),
             (
                 "Code Review",
                 breakdown.get("review_passed", False),
-                f"Quality score: "
-                f"{breakdown.get('quality_score', 0)}/100"
+                f"Quality score: {breakdown.get('quality_score', 0)}/100"
             ),
             (
                 "Security Scan",
                 breakdown.get("security_passed", False),
-                f"{len(breakdown.get('security_findings', []))} "
-                f"findings"
+                f"{len(breakdown.get('security_findings', []))} findings"
             ),
             (
                 "Tests Passing",
                 breakdown.get("tests_passed", False),
-                f"{len(breakdown.get('tests_written', []))} "
-                f"new tests written"
+                f"{len(breakdown.get('tests_written', []))} new tests written"
             ),
         ]
 

@@ -18,11 +18,9 @@ def run_tests(
     test_path:  str | None = None,
     verbose:    bool = True
 ) -> dict[str, Any]:
-    """
-    Run pytest on the target repository.
-    Risk: LOW — fully automatic.
-    Never modifies files.
-    """
+
+    from core.output import is_mcp_mode
+
     result = check_operation(
         "run_tests",
         safety_level=settings.safety_level
@@ -34,34 +32,28 @@ def run_tests(
     try:
         repo_path = Path(settings.target_repo_path)
 
-        # Build pytest command
         cmd = ["python", "-m", "pytest"]
-
         if verbose:
             cmd.append("-v")
-
         if test_path:
             cmd.append(test_path)
-
-        cmd.extend([
-            "--tb=short",
-            "--no-header",
-            "-q"
-        ])
+        cmd.extend(["--tb=short", "--no-header", "-q"])
 
         logger.info(
             "🧪 Running tests: %s",
             " ".join(cmd)
         )
 
-        # Run tests
+        timeout = 20 if is_mcp_mode() else 120
+
         proc = subprocess.run(
             cmd,
             cwd=repo_path,
             capture_output=True,
             text=True,
-            timeout=120
+            timeout=timeout
         )
+
 
         # Parse results
         output   = proc.stdout + proc.stderr

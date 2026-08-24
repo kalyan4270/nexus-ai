@@ -5,6 +5,7 @@ Exposes the full Nexus AI pipeline as MCP tools.
 from __future__ import annotations
 
 import asyncio
+import time
 from typing import Any
 
 from core.config import get_settings
@@ -18,15 +19,14 @@ async def run_nexus_pipeline(
     instruction:  str,
     safety_level: str = "balanced"
 ) -> dict[str, Any]:
-    """
-    Runs the FULL Nexus AI autonomous pipeline:
-    PlannerAgent → CoderAgent → ReviewerAgent
-    → SecurityAgent → TesterAgent → ValidatorAgent
-    → Git commit → GitHub PR
 
-    This is the entire brain of Nexus AI
-    exposed as a single MCP tool.
-    """
+    import os
+    os.environ["NEXUS_MODE"] = "mcp"
+
+    from core.config import get_settings as _get_settings
+    _get_settings.cache_clear()
+    _settings = _get_settings()
+
     from agents.orchestrator import NexusOrchestrator
 
     logger.info(
@@ -36,22 +36,29 @@ async def run_nexus_pipeline(
 
     context = {
         "repo_path":    settings.target_repo_path,
-        "safety_level": safety_level
+        "safety_level": safety_level,
+        "mcp_mode":     True
     }
 
     orchestrator = NexusOrchestrator()
 
-    
-    result = await orchestrator.run(
-        instruction=instruction,
-        context=context
-    )
+    start_time = time.time()
 
-    logger.info(
-        "Nexus pipeline complete: confidence=%s",
-        result.get("confidence", 0)
-    )
+    try:
+        result = await orchestrator.run(instruction, context)
 
+    finally:
+        elapsed = time.time() - start_time
+
+        logger.info(
+            "✅ Pipeline complete in %.1f seconds",
+            elapsed
+        )
+
+        os.environ["NEXUS_MODE"] = "cli"
+        get_settings.cache_clear()
+
+    result["elapsed_seconds"] = round(elapsed, 1)
     return result
 
 

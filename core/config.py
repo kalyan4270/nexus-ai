@@ -34,6 +34,10 @@ class Settings:
     auto_run_tests:        bool = True
     max_diff_chars:        int = 6_000
     audit_db_path:         Path = PROJECT_ROOT / "nexus_audit.db"
+    nexus_mode:            str = "cli" # cli or mcp
+    # MCP specific
+    mcp_test_timeout:      int = 20    # seconds for tests in MCP mode
+
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -66,6 +70,8 @@ class Settings:
             auto_run_tests=os.getenv(
                 "AUTO_RUN_TESTS", "true"
             ).lower() == "true",
+            nexus_mode=os.getenv("NEXUS_MODE", "cli"),
+            mcp_test_timeout=int(os.getenv("MCP_TEST_TIMEOUT", "20")),
         )
 
 

@@ -48,33 +48,42 @@ class TesterAgent(NexusAgent):
         )
 
     def execute(
-        self,
-        task:    str,
-        context: dict[str, Any]
-    ) -> dict[str, Any]:
-        """
-        Run tests and write new ones
-        for changed files.
-        """
-        task_id = context.get(
-            "task_id", self.new_task_id()
-        )
+    self,
+    task:    str,
+    context: dict[str, Any]
+) -> dict[str, Any]:
+
+        from core.output import is_mcp_mode
+
+        task_id = context.get("task_id", self.new_task_id())
         self.start_task(task_id)
 
         try:
-            logger.info(
-                "🧪 TesterAgent executing: %s",
-                task
-            )
+            logger.info("🧪 TesterAgent executing: %s", task)
 
-            files_changed = context.get(
-                "files_changed", []
-            )
+            files_changed = context.get("files_changed", [])
 
             # Step 1 — Run existing tests
             test_result = self._run_existing_tests()
 
-            # Step 2 — Write new tests if needed
+            # ✅ In MCP mode skip test writing to save time
+            # Claude Desktop has strict timeout limits
+            if is_mcp_mode():
+                logger.info(
+                    "MCP mode: skipping test writing to avoid timeout"
+                )
+                all_passed = test_result.get("all_passed", True)
+                return {
+                    "success":           True,
+                    "task_id":           task_id,
+                    "all_passed":        all_passed,
+                    "passed":            test_result.get("passed", 0),
+                    "failed":            test_result.get("failed", 0),
+                    "new_tests_written": [],
+                    "approved":          all_passed
+                }
+
+            # CLI mode — full test writing
             new_tests_written = []
             if files_changed:
                 new_tests = self._write_tests(
@@ -82,14 +91,11 @@ class TesterAgent(NexusAgent):
                     task=          task,
                     context=       context
                 )
-                new_tests_written = new_tests.get(
-                    "files_written", []
-                )
+                new_tests_written = new_tests.get("files_written", [])
 
-            # Step 3 — Run tests again with new ones
+            # Run tests again with new ones
             final_result = self._run_existing_tests()
-
-            all_passed = final_result.get("all_passed", False)
+            all_passed   = final_result.get("all_passed", False)
 
             if all_passed:
                 logger.info(
@@ -114,9 +120,7 @@ class TesterAgent(NexusAgent):
             }
 
         except Exception as exc:
-            logger.error(
-                "TesterAgent failed: %s", exc
-            )
+            logger.error("TesterAgent failed: %s", exc)
             return {
                 "success": False,
                 "error":   str(exc),

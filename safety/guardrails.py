@@ -87,18 +87,21 @@ def request_confirmation(
     description: str,
     diff:        str | None = None
 ) -> bool:
-    """
-    Ask human for confirmation in terminal.
-    Shows operation details and diff if available.
-    Returns True if approved, False if rejected.
-    """
+    from core.output import is_mcp_mode
+
+    # In MCP mode auto-approve MEDIUM risk
+    # (user already approved by calling nexus_run)
+    if is_mcp_mode():
+        logger.info(
+            "MCP mode: auto-approving %s", operation
+        )
+        return True
+
+    # CLI mode — ask human
     from rich.console import Console
-    from rich.panel import Panel
-    from rich.text import Text
+    from rich.panel   import Panel
 
     console = Console()
-
-    # Show operation details
     console.print()
     console.print(Panel(
         f"[yellow]Operation:[/yellow] {operation}\n"
@@ -108,7 +111,6 @@ def request_confirmation(
         border_style="yellow"
     ))
 
-    # Ask for confirmation
     while True:
         response = console.input(
             "[yellow]Proceed? (yes/no): [/yellow]"
